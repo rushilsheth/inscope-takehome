@@ -17,8 +17,8 @@ def eval_revenue(revenue_validation, mapping_df):
     revenue_validation['llm_revenue'] = 0
     for index, row in revenue_validation.iterrows():
         file_path = mapping_df.loc[mapping_df.CIK == row.CIK].FileName.values[0]
-        json_response = summarize_text(file_path)
-        revenue_validation['llm_revenue'] = json_response[0]['revenue']
+        summary_list, summary_json = summarize_text(file_path)
+        revenue_validation['llm_revenue'] = summary_json['revenue']
     return revenue_validation
 
 load_dotenv() 
@@ -27,7 +27,6 @@ def eval_summary(CIK, pdf_path, mapping_df):
     '''compare a ceo exec summary to the llm summary'''
     file_path = mapping_df.loc[mapping_df.CIK == CIK].FileName.values[0]
     summary_list, json_response = summarize_text(file_path)
-    print(json_response)
     llm_full_article_summary = json_response['summary']
     with open(pdf_path, 'r') as file:
         file_contents = file.read()

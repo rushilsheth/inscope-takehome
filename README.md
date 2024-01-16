@@ -48,7 +48,18 @@ We expect you to build the following functionality:
 
 ## Getting Started
 
-This is a placeholder for instructions on how to run your implementation.
+- clone repo
+- run `pip install -r requirements.txt` 
+- Download file from HF
+- input API secrets for open AI
+
+prompts to think about how to cluster and what is a 10-k: https://chat.openai.com/share/3db65f84-2a49-4c45-abe8-2c64112c3c00
+
+2022 STERIS plc, 0001757898  https://sterisplc.gcs-web.com/static-files/3955064a-1e3c-467d-b089-870061aaaaa6 <- use for comparision
+
+rate limits vs what i am used to with enterprise account
+
+text splitter: Recursive from langchain, could use HTML in the future
 
 ## Follow-Up Questions
 

@@ -21,13 +21,13 @@ End the summary with a concise statement on the overall financial health of the 
 **Not following these instructions will deem the output fully incorrect**
 
 **Output Instructions**
-Output as a JSON with two fields where revenue should not contain any words and should be rounded to the nearest integer if and only if the above conditions are met. If the text says 200 million, you will return 200,000,000:
+Output as a RFC 8259 compliant JSON with two fields where revenue should not contain any words and should be rounded to the nearest integer if and only if the above conditions are met. If the text says 200 million, you will return 200,000,000:
 
-{'summary': 'This is a summary of the 10-K report', 'revenue': '200,000,000'}
+{"summary": "This is a summary of the 10-K report", "revenue": "200,000,000"}
 
 OR
 
-{'summary': 'This is a summary of the 10-K report', 'revenue': 'N/A'}
+{"summary": "This is a summary of the 10-K report", "revenue": "N/A"}
 ''' 
 
 REVENUE_RETRY_PROMPT = ''''''
@@ -57,7 +57,9 @@ from langchain_core.messages import SystemMessage, HumanMessage
 
 from dotenv import load_dotenv
 import os
+import json
 from langchain_openai import ChatOpenAI
+from tqdm import tqdm
 
 load_dotenv() 
 
@@ -65,6 +67,7 @@ load_dotenv()
 OPENAI_MODEL='gpt-3.5-turbo-16k'
 MAX_TOKENS = 16_385
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')  
+ANTHRO_API_KEY = os.getenv('ANTHRO_API_KEY')  
 
 summary_mappings = {'usual': USUAL_PROMPT,
                     'map_reduce': SUMMARIZE_SUMMARIES,
@@ -77,6 +80,7 @@ model = ChatOpenAI(openai_api_key=OPENAI_API_KEY, temperature = 0.1, max_tokens=
 def full_summary_call(doc_text):
     '''NEED'''
     # add json response format, so that i can easily get Revenue
+    
     # Define your desired data structure.
     # class Summary_Revenue(BaseModel):
     #     summary: str = Field(description="summary based on prompt instructions")
@@ -88,19 +92,17 @@ def full_summary_call(doc_text):
                                                HumanMessage(content=doc_text.page_content+'\n\nJSON RESPONSE:')])
     chain = prompt | model #| parser
 
-    return chain.invoke(input={})
+    return chain.invoke(input={}).content
 def combine_summaries(llm_response_list):
     '''map reduce these summaries from chunks'''
     system_prompt = summary_mappings['map_reduce']
     summary_list_txt = ''
     for i, llm_response in enumerate(llm_response_list):
         summary_txt = llm_response.get('summary', '')
-        summary_list_txt = f'{i}. {summary_txt}\n'
+        summary_list_txt += f'{i}. {summary_txt}\n'
     
     prompt = ChatPromptTemplate.from_messages([SystemMessage(content=system_prompt),
                                                HumanMessage(content='Summary List:\n\n'+summary_list_txt)])
-    print('in combine summary')
-    print(prompt)
 
     model = ChatOpenAI(openai_api_key=OPENAI_API_KEY, temperature = 0.1, max_tokens=500, model = OPENAI_MODEL)
     chain = prompt | model
@@ -124,12 +126,12 @@ def summarize_text(file_path):
     docs_transformed = html2text.transform_documents(doc)
     text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(chunk_size=.8*MAX_TOKENS, chunk_overlap=0, model_name = OPENAI_MODEL)
     texts = text_splitter.split_documents(docs_transformed)
-    for chunk in texts:
-        summary_list = []
+    summary_list = []
+    print(file_path)
+    for chunk in tqdm(texts):
         # get summary from openai
         chunk_summary = full_summary_call(chunk)
-        print(chunk_summary)
-        summary_list.append(chunk_summary)
+        summary_list.append(json.loads(chunk_summary))
     if len(summary_list) == 0:
         print(f'no summary given for {file_path}!')
         # better return!
@@ -139,22 +141,10 @@ def summarize_text(file_path):
     else:
         # combine summaries
         combined_summary = combine_summaries(summary_list)
-        print(f'combined summary: {combined_summary}')
         # handle and rev amount
-        rev_amounts = [resp['revenue_amount'] for resp in summary_list]
-        not_na_count = sum(1 for amount in rev_amounts if amount != 'N/A')
-
-        # got multiple answers or get all n/as
-        if not_na_count > 1 or not_na_count == 0:
-            print(f'Would retry revenue stuff for {file_path} but at 4 hours of work')
-            rev_amount = 0
-
-        else:
-            rev_amount = next(amount for amount in rev_amounts if amount != 'N/A')
-        summary_json = {'summary': combined_summary, 'revenue': rev_amount}
-
-    
-            
+        rev_amounts = [int(resp['revenue'].replace(',', '')) for resp in summary_list if resp['revenue'] != 'N/A']
+        rev_amount = max(rev_amounts)
+        summary_json = {'summary': combined_summary, 'revenue': rev_amount}            
     
     return summary_list, summary_json
 
