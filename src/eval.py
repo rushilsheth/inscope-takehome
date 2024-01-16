@@ -18,7 +18,7 @@ def eval_revenue(revenue_validation, mapping_df):
     for index, row in revenue_validation.iterrows():
         file_path = mapping_df.loc[mapping_df.CIK == row.CIK].FileName.values[0]
         summary_list, summary_json = summarize_text(file_path)
-        revenue_validation['llm_revenue'] = summary_json['revenue']
+        row['llm_revenue'] = summary_json['revenue']
     return revenue_validation
 
 load_dotenv() 

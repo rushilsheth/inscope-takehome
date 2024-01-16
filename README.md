@@ -53,7 +53,7 @@ We expect you to build the following functionality:
 - Download file from HF
 - input API secrets for open AI
 
-prompts to think about how to cluster and what is a 10-k: https://chat.openai.com/share/3db65f84-2a49-4c45-abe8-2c64112c3c00
+prompts to think about how to cluster and what is a 10-k: https://chat.openai.com/share/ec24cd6f-2153-46a0-8c05-831583d14bf9 
 
 2022 STERIS plc, 0001757898  https://sterisplc.gcs-web.com/static-files/3955064a-1e3c-467d-b089-870061aaaaa6 <- use for comparision
 
