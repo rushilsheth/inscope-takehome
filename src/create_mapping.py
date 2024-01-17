@@ -2,13 +2,8 @@ import os
 import pandas as pd
 
 def get_sp500(file_name):
-    # Open the file in read mode
     with open(file_name, 'r') as file:
-        # Read each line and store it in a list
-        # .strip() is used to remove leading/trailing whitespace (including new lines)
         sp500_list = [line.strip() for line in file]
-
-    # Now, list_from_file contains all the lines from yourfile.txt as elements of the list
     print(f'list contains {len(sp500_list)} elements')
     return sp500_list
 

@@ -11,6 +11,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from dotenv import load_dotenv
 import os
 import json
+import re
 from langchain_openai import ChatOpenAI
 from tqdm import tqdm
 
@@ -30,11 +31,9 @@ summary_mappings = {'usual': USUAL_PROMPT,
 # LLM instance with low temp since we just want facts
 model = ChatOpenAI(openai_api_key=OPENAI_API_KEY, temperature = 0.1, max_tokens=500, model = OPENAI_MODEL)
 
-#### diff chains! ####
 def full_summary_call(doc_text):
-    '''NEED'''
+    '''responsible for making the call for each text chunk and getting summary and revenue JSON'''
     
-    # Define your desired data structure.
     # class Summary_Revenue(BaseModel):
     #     summary: str = Field(description="summary based on prompt instructions")
     #     revenue: str = Field(description="total revenue for the fiscal year")
@@ -61,50 +60,29 @@ def combine_summaries(llm_response_list):
     chain = prompt | model
     return chain.invoke(input={})
 
-import re
-
-import re
-
 def extract_item_7(doc):
+    '''helper function that uses regex to reduce size of document by only pulling Item 7'''
     text = doc[0].page_content
 
-    # Define the pattern to find the end of the Table of Contents
-    toc_end_pattern = r"Table\s+of\s+Contents"
-
-    # Define the pattern to find the start of Item 7 with flexible punctuation and spacing
+    toc_end_pattern = r"Table\s+of\s+Contents" #want to avoid listing of items at begining of 10-K
     start_pattern = r"Item\s*7[:.]\s*Managemen"
-
-    # Define the pattern to find the start of the next Item with flexible punctuation and spacing
     end_pattern = r"Item\s*8[:.]\s*Financial Statem"
 
-    # Find the end of the Table of Contents
     toc_end_match = re.search(toc_end_pattern, text, re.IGNORECASE | re.DOTALL)
-
-    # Set the starting point for searching Item 7 after the Table of Contents
     start_index = toc_end_match.end()+20_000 if toc_end_match else 0
-
-    # Find the start of Item 7 after the Table of Contents
     start_match = re.search(start_pattern, text[start_index:], re.IGNORECASE | re.DOTALL)
 
     if start_match:
-        # Adjust the index for the start of Item 7 relative to the entire document
         adjusted_start_index = start_index + start_match.start()
-
-        # Find the start of the next Item after Item 7
         end_match = re.search(end_pattern, text[adjusted_start_index:], re.IGNORECASE | re.DOTALL)
 
         if end_match:
-            # Adjust the index for the end of the extraction relative to the entire document
             adjusted_end_index = adjusted_start_index + end_match.start()
-
-            # Extract the text from the start of Item 7 to the start of the next Item
             item_7_text = text[adjusted_start_index:adjusted_end_index]
             return item_7_text
         else:
-            # If the end pattern is not found, return text from Item 7 to the end of the document
             return text[adjusted_start_index:]
     else:
-        # If Item 7 is not found, return an empty string or an appropriate message
         return ""
 
 
@@ -113,7 +91,7 @@ def summarize_text(file_path):
     based on tokens due to large size of the file (over 100 pages)
     # ideally have a mapping for model to tokens
     # chunk it and summarize each chunk
-    # reduce summaries if needed
+    # finallym reduce summaries 
     '''
     loader = UnstructuredHTMLLoader(file_path)
     doc = loader.load()
@@ -131,7 +109,6 @@ def summarize_text(file_path):
         summary_list.append(json.loads(chunk_summary))
     if len(summary_list) == 0:
         print(f'no summary given for {file_path}!')
-        # better return!
         return {'summary': '', 'revenue': ''}
     elif len(summary_list) == 1:
         summary_json = summary_list[0]
