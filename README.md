@@ -69,9 +69,13 @@ mapping_df = create_mapping_df('data') # data is location of HF data
 ## Follow-Up Questions
 
   1. Describe which task you found most difficult in the implementation, and why.
-Filtering down what to send to the LLM to create a summary since 10-Ks are all around 100. I utilized ChatGPT to quickly help me understand 10-Ks [interaction](https://chat.openai.com/share/ec24cd6f-2153-46a0-8c05-831583d14bf9). Once I started interacating with OpenAI I used gpt-4 initially and ran into rate limiting as I was using my personal account. I was used to an enterprise account with much higher rate limits.
+
+Filtering down what to send to the LLM to create a summary since 10-Ks are all around 100. I utilized ChatGPT to quickly help me understand 10-Ks interaction [prompt](https://chat.openai.com/share/ec24cd6f-2153-46a0-8c05-831583d14bf9). Once I started interacting with OpenAI I used gpt-4 initially and ran into rate limiting as I was using my personal account. I was used to an enterprise account with much higher rate limits.
+
   2. What led you to choose the libraries or frameworks you used in your implementation?
+   
    For my implementation, I selected Langchain because it facilitates the loading of HTML documents and enables interaction with OpenAI's language models. Langchain was my choice due to its comprehensive suite of tools that span the entire spectrum of working with Large Language Models (LLMs). Additionally, the ease of creating LLM pipelines with Langchain Expression Language (LCEL) was a significant factor. I opted for OpenAI's solutions as I currently don't have access to the Claude API, which would have been beneficial for handling extensive documents.
+   
   3. How did you evaluate whether the clusters and summaries created by your system were good or not?
   
   ### Clusters
@@ -120,7 +124,7 @@ Filtering down what to send to the LLM to create a summary since 10-Ks are all a
 My methodology incorporated a hybrid approach, utilizing both Large Language Models (LLMs) and traditional Machine Learning (ML) models. The LLMs were primarily employed for extracting pertinent information from the documents, while the ML models were leveraged for clustering purposes. If integrating more aspects of one approach into the other, I believe the key addition would be an embedding framework, as previously mentioned. Given the extensive length of the documents, a sophisticated method to pre-filter the text before it reaches the LLMs could greatly enhance both the precision of the output and cost-efficiency (by reducing the number of tokens processed).
   
   6. If you had to build this as part of a production system, providing an inference API for previously unseen reports, how would you do it? What would you change in your implementation?
-  
+
   In a production environment, handling new reports through an inference API would involve a series of systematic steps. Initially, each report would undergo a filtering phase to determine the appropriate text to forward to the LLM. Following this, we would extract the summary and revenue data from the LLM's output.
   The next crucial step is assigning a cluster to this new report. This process would be twofold: Firstly, we would assign a provisional cluster based on the current medians of existing clusters, ensuring consistency in the user experience as these medians are less susceptible to outliers. Secondly, we would reevaluate the entire clustering to ascertain if any adjustments are necessary, based on a predefined heuristic. However, given the median-based approach, significant changes in the clusters or their numbers are unlikely.
   Ultimately, the inference API would provide one of two responses: the assigned cluster for the new report or an entirely updated set of clusters. The choice of response depends on certain criteria and is relatively straightforward to handle. Additionally, to enhance future efficiency, we would store the LLM's responses, potentially reducing future token usage.
