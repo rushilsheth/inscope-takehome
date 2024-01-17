@@ -31,7 +31,7 @@ def create_mapping_df(form_10k_directory):
 
     df = pd.DataFrame(mappings, columns=['CIK', 'FileName'])
 
-    df.to_csv('cik_file_mapping.csv', index=False)
+    df.to_csv('other_data/cik_file_mapping.csv', index=False)
     
     return df
     
