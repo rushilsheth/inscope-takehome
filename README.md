@@ -38,34 +38,66 @@ We do not expect you to download any additional data from the SEC's database, bu
 ## Specification
 
 We expect you to build the following functionality:
-  - [ ] You will filter down the dataset to cluster companies that are in the S&P 500 index. You can find a recent list of CIKs for companies in the S&P 500 in the `SP500.txt` file.
-  - [ ] You will create a script that given a directory with report files can produce a `CIK -> Company Name` mapping in the shape of a CSV file with two columns: CIK and Company Name. Each row in this file will represent each file in the provided data. (hint: you don't need to throw an LLM at this problem)
-  - [ ] You will run your mapping script on the provided data, and include it in your response.
-  - [ ] You will write a data pipeline to process the provided HTML into an intermediate representation that can be used for clustering. One of the features in your intermediate representation should be a 1-paragraph summary of the report. You can use any pre-trained language model you like to generate the summary.
-  - [ ] You will use your pipeline to assign every company in the dataset into similar groups based on their financial statements.
-  - [ ] You will provide a Jupyter Notebook, a Streamlit app, or equivalent for users to inspect and interact with the results of your clustering and summarization. The visualization should allow the user to select a company and show other similar companies in the same cluster.
+  - [x] You will filter down the dataset to cluster companies that are in the S&P 500 index. You can find a recent list of CIKs for companies in the S&P 500 in the `SP500.txt` file.
+  - [x] You will create a script that given a directory with report files can produce a `CIK -> Company Name` mapping in the shape of a CSV file with two columns: CIK and Company Name. Each row in this file will represent each file in the provided data. (hint: you don't need to throw an LLM at this problem)
+  - [x] You will run your mapping script on the provided data, and include it in your response.
+  - [x] You will write a data pipeline to process the provided HTML into an intermediate representation that can be used for clustering. One of the features in your intermediate representation should be a 1-paragraph summary of the report. You can use any pre-trained language model you like to generate the summary.
+  - [x] You will use your pipeline to assign every company in the dataset into similar groups based on their financial statements.
+  - [x] You will provide a Jupyter Notebook, a Streamlit app, or equivalent for users to inspect and interact with the results of your clustering and summarization. The visualization should allow the user to select a company and show other similar companies in the same cluster.
 
 
 ## Getting Started
 
-- clone repo
+#### To run App
+- clone repo and create a `venv`
+- run `pip install ipywidgets pandas`
+- on Command Line type `jupyter notebook` and open `main.ipynb` in browswer. You can also do this via vs code.
+- Run the first code block and interact with the drop down. That's all!
+
+#### To Reproduce results
 - run `pip install -r requirements.txt` 
-- Download file from HF
-- input API secrets for open AI
-
-prompts to think about how to cluster and what is a 10-k: https://chat.openai.com/share/ec24cd6f-2153-46a0-8c05-831583d14bf9 
-
-2022 STERIS plc, 0001757898  https://sterisplc.gcs-web.com/static-files/3955064a-1e3c-467d-b089-870061aaaaa6 <- use for comparision
-
-rate limits vs what i am used to with enterprise account
+- Download file from Hugging face
+- Create a local `.env` file in the root directory and populate with OPENAI_API_KEY = 'XXXX'
+- run all in `clustering.ipynb` with correct function params for location of 10-K data 
+  - note this will cost you openAI credits as it uses openAI to generate summaries
+- to run mapping script:
+```
+from src.create_mapping import create_mapping_df 
+mapping_df = create_mapping_df('data') # data is location of HF data
+```
 
 text splitter: Recursive from langchain, could use HTML in the future
 
 ## Follow-Up Questions
 
   1. Describe which task you found most difficult in the implementation, and why.
+Filtering down what to send to the LLM to create a summary since 10-Ks are all around 100. I utilized ChatGPT to quickly help me understand 10-Ks [interaction](https://chat.openai.com/share/ec24cd6f-2153-46a0-8c05-831583d14bf9). Once I started interacating with OpenAI I used gpt-4 initially and ran into rate limiting as I was using my personal account. I was used to an enterprise account with much higher rate limits.
   1. What led you to choose the libraries or frameworks you used in your implementation?
+   For my implementation, I selected Langchain because it facilitates the loading of HTML documents and enables interaction with OpenAI's language models. Langchain was my choice due to its comprehensive suite of tools that span the entire spectrum of working with Large Language Models (LLMs). Additionally, the ease of creating LLM pipelines with Langchain Expression Language (LCEL) was a significant factor. I opted for OpenAI's solutions as I currently don't have access to the Claude API, which would have been beneficial for handling extensive documents.
   1. How did you evaluate whether the clusters and summaries created by your system were good or not?
+  
+  ### Clusters
+  I formed the clusters primarily focusing on the revenue metric(extracted from 10-K via LLM), which meant our clustering was based on a single numerical dimension. The choice to use K-medoids was influenced by the data's pronounced skew towards the higher end, as illustrated in the following histogram:
+  ![](diagrams/histogram.png)
+
+
+  To determine the optimal number of clusters, I utilized an elbow graph. This approach helped in identifying the inflection point for a distinct number of clusters by examining the inertia_ attribute. After analysis, it was concluded that 4 clusters were most suitable:![](diagrams/elbow.png)
+
+  The final clustering result is shown below. The clear demarcation between the groups is evident:![](diagrams/clusters.png)
+
+  ### Summaries
+  >I only tested one due to time constraints, I tested a [CEO's letter](https://sterisplc.gcs-web.com/static-files/3955064a-1e3c-467d-b089-870061aaaaa6 ) vs my summary and asked the LLM for a score out of 10. I tested Steris plc, CIK 0001757898. Since we only send Item 7 to the LLM, the summary was not the best. LLM evaluation:
+  The CEO's letter summary highlights the achievements and growth of STERIS in fiscal year 2022. The CEO expresses gratitude towards the employees and acknowledges their contributions to the company's success. The letter emphasizes the higher-than-expected revenue growth, driven by various segments of the business. It also mentions the improvement in operating margins and adjusted earnings per diluted share. The CEO discusses the company's plans for the future, including investments in research and development and global projects. The tone of the letter is positive, optimistic, and appreciative.\n\nOn the other hand, the 10-K report summary provides limited information, only mentioning the total revenue reported by STERIS Corporation without any further details. It lacks the comprehensive overview of the company's performance and future plans that the CEO's letter provides. The tone of the 10-K report summary is neutral and factual.\n\nIn terms of content, the CEO's letter focuses on the company's achievements, growth, and future prospects, while the 10-K report summary only provides a brief mention of the total revenue. The CEO's letter emphasizes the outperformance of different segments, cost synergy targets, and the company's ability to meet customer needs. The 10-K report summary, however, does not provide any specific information about these aspects.\n\nIn comparing the two summaries, it is evident that the CEO's letter provides a more detailed and comprehensive overview of STERIS's performance and future plans. It conveys a positive and optimistic tone, highlighting the company's achievements and growth. The 10-K report summary, on the other hand, lacks specific details and focuses solely on the total revenue figure.\n\nBased on the limited information provided, it is difficult to accurately assess the accuracy of the 10-K report summary. However, given its brevity and lack of specific details, it may not accurately capture the full picture of STERIS's financial performance and other key aspects. Therefore, I would rate the accuracy of the 10-K report summary as 5 out of 10.
+
+
+  ### Revenue
+  I pulled 5 annual revenues from the internet and compared them to what the LLM extracted. Whenever a revenue was pulled we were correct!
+    - [Motorla Solutions, Inc.](https://www.google.com/search?q=MOTOROLA+SOLUTIONS,+INC.+revenue+2022&sca_esv=598681343&sxsrf=ACQVn09BrYDNFQMiAI3p8sdyLpNdmHdiHA:1705379269800&ei=xQWmZbfCMLLi0PEPqO-P2Ak&ved=0ahUKEwj3uNXsiOGDAxUyMTQIHaj3A5sQ4dUDCBE&uact=5&oq=MOTOROLA+SOLUTIONS,+INC.+revenue+2022&gs_lp=Egxnd3Mtd2l6LXNlcnAiJU1PVE9ST0xBIFNPTFVUSU9OUywgSU5DLiByZXZlbnVlIDIwMjIyCBAAGIAEGKIEMggQABiABBiiBDIIEAAYiQUYogRI_rEHUPupB1iDrwdwCHgBkAEAmAGcAaAB-AGqAQMxLjG4AQPIAQD4AQL4AQHCAgoQABhHGNYEGLADwgIIECEYoAEYwwTiAwQYACBBiAYBkAYI&sclient=gws-wiz-serp)
+    - [DTE Energy Inc](https://www.google.com/search?q=dte+energy+inc+revenue+2022&sca_esv=598681343&sxsrf=ACQVn0_1SbQTyISanht__YwIQUr-0UdEEg:1705379472154&ei=kAamZfeACZPE0PEPk5eU2Ak&oq=DTE+Engery+revenue+2022&gs_lp=Egxnd3Mtd2l6LXNlcnAiF0RURSBFbmdlcnkgcmV2ZW51ZSAyMDIyKgIIADIMECEYChigARjDBBgKMgwQIRgKGKABGMMEGApIqWZQyBFYwltwBHgBkAEAmAGOAaABnQmqAQQxMy4xuAEDyAEA-AEC-AEBwgIHECMYsAMYJ8ICChAAGEcY1gQYsAPCAgYQABgHGB7CAgcQABiABBgNwgIGEAAYHhgNwgIIEAAYBRgeGA3CAgsQABiABBiKBRiGA8ICBBAAGB7CAgoQIRgKGKABGMME4gMEGAAgQYgGAZAGCQ&sclient=gws-wiz-serp)
+    - [ADP](https://www.google.com/search?q=ADP+revenue+2023&sca_esv=598932482&sxsrf=ACQVn0_9II63_ROp6BCoacVsOsUQ01QgGg:1705448069343&ei=hRKnZbDLFMP00PEPvaSusAE&ved=0ahUKEwjwoeySieODAxVDOjQIHT2SCxYQ4dUDCBA&uact=5&oq=ADP+revenue+2023&gs_lp=Egxnd3Mtd2l6LXNlcnAiEEFEUCByZXZlbnVlIDIwMjMyBRAAGIAEMgsQABiABBiKBRiGAzILEAAYgAQYigUYhgMyCxAAGIAEGIoFGIYDSJKtAVDLogFY26kBcAZ4AZABAJgBqwGgAckCqgEDMi4xuAEDyAEA-AEBwgIKEAAYRxjWBBiwA8ICBhAAGAcYHuIDBBgAIEGIBgGQBgc&sclient=gws-wiz-serp)
+    - [Monster Energy drink](https://www.google.com/search?q=MONSTER+BEVERAGE+CORPORATION+revenue+2022&sca_esv=598932482&sxsrf=ACQVn0_acio_6DpyT4caJ4g8feXpsN-kdg:1705447744972&ei=QBGnZaj3Opmx0PEPk_G64AI&ved=0ahUKEwiol5b4h-ODAxWZGDQIHZO4DiwQ4dUDCBA&uact=5&oq=MONSTER+BEVERAGE+CORPORATION+revenue+2022&gs_lp=Egxnd3Mtd2l6LXNlcnAiKU1PTlNURVIgQkVWRVJBR0UgQ09SUE9SQVRJT04gcmV2ZW51ZSAyMDIyMgQQIxgnSIcGUABYAHAAeAGQAQCYAWigAWiqAQMwLjG4AQPIAQD4AQHiAwQYACBB&sclient=gws-wiz-serp)
+    - [Jacob Solutions Inc](https://www.google.com/search?q=Jacobs+Solutions+Inc.+revenue+2023&sca_esv=598932482&sxsrf=ACQVn09iy0lxBNFnkhGYerMTzkM7G9Zzrg:1705447810790&ei=ghGnZd3dL4bY0PEPmr6V8Ac&ved=0ahUKEwjdpseXiOODAxUGLDQIHRpfBX4Q4dUDCBA&uact=5&oq=Jacobs+Solutions+Inc.+revenue+2023&gs_lp=Egxnd3Mtd2l6LXNlcnAiIkphY29icyBTb2x1dGlvbnMgSW5jLiByZXZlbnVlIDIwMjMyBRAhGKABMgUQIRigAUiaCFD4BFiXB3ABeAGQAQCYAXWgAc4BqgEDMS4xuAEDyAEA-AEBwgIKEAAYRxjWBBiwA8ICBBAjGCfiAwQYACBBiAYBkAYI&sclient=gws-wiz-serp)
+
   1. If there were no time or budget restrictions for this exercise, what improvements would you make in the following areas:
       - Implementation
       - User Experience
